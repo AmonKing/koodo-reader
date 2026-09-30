@@ -9,10 +9,12 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container: node:20-bullseye
     steps:
-      - name: Install build dependencies
+      - name: Install build dependencies (bullseye is EOL — use archive.debian.org)
         run: |
-          apt-get update -qq
-          apt-get install -y -qq build-essential python3 ruby-full jq xz-utils rsync zsync ca-certificates
+          printf 'deb [trusted=yes] http://archive.debian.org/debian bullseye main\ndeb [trusted=yes] http://archive.debian.org/debian-security bullseye-security main\n' > /etc/apt/sources.list
+          rm -f /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources
+          apt-get -o Acquire::Check-Valid-Until=false update
+          apt-get install -y --no-install-recommends build-essential python3
 
       - uses: actions/checkout@v4
 
@@ -23,13 +25,13 @@ jobs:
 
       - name: Target Linux arm64 AppImage only
         run: |
-          jq '.build.linux.target = [{"target":"AppImage","arch":["arm64"]}]' package.json > pkg.tmp.json
-          mv pkg.tmp.json package.json
+          node -e 'const fs=require("fs");const p=JSON.parse(fs.readFileSync("package.json","utf8"));
+            p.build.linux.target=[{target:"AppImage",arch:["arm64"]}];
+            fs.writeFileSync("package.json",JSON.stringify(p,null,2))'
 
       - name: Build
         run: npx electron-builder --linux --arm64 --publish never
         env:
-          USE_SYSTEM_FPM: "true"
           USE_HARD_LINKS: "false"
 
       - name: Verify glibc requirements (must be <= GLIBC_2.31)
