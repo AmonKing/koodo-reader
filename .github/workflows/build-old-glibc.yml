@@ -9,9 +9,9 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container: node:20-bullseye
     steps:
-      - name: Install build dependencies (bullseye is EOL — use archive.debian.org)
+      - name: Install build dependencies (bullseye is EOL — use archive.debian.org main only)
         run: |
-          printf 'deb [trusted=yes] http://archive.debian.org/debian bullseye main\ndeb [trusted=yes] http://archive.debian.org/debian-security bullseye-security main\n' > /etc/apt/sources.list
+          printf 'deb [trusted=yes] http://archive.debian.org/debian bullseye main\n' > /etc/apt/sources.list
           rm -f /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources
           apt-get -o Acquire::Check-Valid-Until=false update
           apt-get install -y --no-install-recommends build-essential python3
