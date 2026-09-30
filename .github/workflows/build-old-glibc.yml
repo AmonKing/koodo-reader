@@ -1,0 +1,56 @@
+name: build-arm64-debian11
+
+# Build Koodo Reader arm64 AppImage with all native modules compiled against
+# glibc 2.31 (Debian 11), instead of upstream's ubuntu-24.04-arm (glibc 2.39).
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    container: node:20-bullseye
+    steps:
+      - name: Install build dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq build-essential python3 ruby-full jq xz-utils rsync zsync ca-certificates
+
+      - uses: actions/checkout@v4
+
+      - name: Install npm dependencies (yarn.lock pins better-sqlite3 11.6.0)
+        run: |
+          corepack enable
+          yarn install --frozen-lockfile
+
+      - name: Target Linux arm64 AppImage only
+        run: |
+          jq '.build.linux.target = [{"target":"AppImage","arch":["arm64"]}]' package.json > pkg.tmp.json
+          mv pkg.tmp.json package.json
+
+      - name: Build
+        run: npx electron-builder --linux --arm64 --publish never
+        env:
+          USE_SYSTEM_FPM: "true"
+          USE_HARD_LINKS: "false"
+
+      - name: Verify glibc requirements (must be <= GLIBC_2.31)
+        run: |
+          appimg=$(ls dist/*.AppImage)
+          echo "artifact: $appimg"
+          chmod +x "$appimg"
+          "$appimg" --appimage-extract > /dev/null
+          echo "--- top version requirements across all bundled ELF files:"
+          find squashfs-root \( -name '*.so*' -o -name '*.node' \) -print0 \
+            | xargs -0 grep -haoE 'GLIBC_2\.[0-9]+|GLIBCXX_[0-9.]+' 2>/dev/null \
+            | sort -uV | tail -15
+          max=$(find squashfs-root \( -name '*.so*' -o -name '*.node' \) -print0 \
+            | xargs -0 grep -haoE 'GLIBC_2\.[0-9]+' 2>/dev/null | sort -uV | tail -1)
+          echo "max GLIBC requirement: ${max:-none}"
+          [ "$(printf '%s\nGLIBC_2.31\n' "$max" | sort -V | tail -1)" = "GLIBC_2.31" ] \
+            || { echo "FAIL: requires $max > GLIBC_2.31"; exit 1; }
+          echo "PASS"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: koodo-arm64-glibc231
+          path: dist/*.AppImage
+          if-no-files-found: error
