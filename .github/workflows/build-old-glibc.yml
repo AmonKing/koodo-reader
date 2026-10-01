@@ -15,7 +15,7 @@ jobs:
           set -eux
           dnf -y install dnf-plugins-core >/dev/null
           dnf -y module enable python39 >/dev/null
-          dnf -y install python39 tar xz gzip make gcc gcc-c++ >/dev/null
+          dnf -y install python39 tar xz gzip bzip2 make gcc gcc-c++ >/dev/null
           ln -sf /usr/bin/python3.9 /usr/local/bin/python3
           node_tar=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
             | grep -oE 'node-v22\.[0-9]+\.[0-9]+-linux-arm64\.tar\.xz' | head -1)
