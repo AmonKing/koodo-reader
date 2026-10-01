@@ -14,8 +14,13 @@ jobs:
         run: |
           curl -sL -o readest.AppImage \
             https://github.com/readest/readest/releases/download/v0.12.10/Readest_0.12.10_aarch64.AppImage
+          ls -la readest.AppImage
+          file readest.AppImage
           chmod +x readest.AppImage
-          ./readest.AppImage --appimage-extract > /dev/null
+          ./readest.AppImage --appimage-extract || true
+          echo "=== squashfs-root contents:"
+          ls -la squashfs-root/ 2>&1 | head -30
+          du -sh squashfs-root 2>&1
 
       - name: Report bundled shared libraries
         run: |
