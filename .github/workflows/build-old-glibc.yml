@@ -3,31 +3,32 @@ name: build-arm64-debian11
 # Build Koodo Reader arm64 AppImage with all native modules compiled against
 # glibc 2.28 (UBI8 / RHEL8 baseline) — target machine is UOS V20 (Debian 10,
 # glibc 2.28). Upstream builds on ubuntu-24.04-arm (glibc 2.39).
+#
+# Toolchain: gcc-toolset-12 (GCC 12, links against system glibc 2.28) exposed
+# via /usr/local/bin symlinks — BASH_ENV approach fails because the enable
+# script does not exist yet when the installing step's shell starts.
 on: workflow_dispatch
 
 jobs:
   build:
     runs-on: ubuntu-24.04-arm
     container: registry.access.redhat.com/ubi8/ubi:latest
-    env:
-      # gcc-toolset-12 (GCC 12, still targeting system glibc 2.28) — better-sqlite3 needs C++20,
-      # base GCC 8 only knows -std=c++2a
-      BASH_ENV: /opt/rh/gcc-toolset-12/enable
     steps:
-      - name: Install toolchain (UBI8 glibc 2.28; node22 official binaries are RHEL8-built)
+      - name: Install toolchain and expose gcc-toolset-12 via /usr/local/bin
         run: |
           set -eux
           dnf -y install dnf-plugins-core >/dev/null
           dnf -y module enable python39 >/dev/null
           dnf -y install python39 tar xz gzip bzip2 make gcc-toolset-12 binutils findutils >/dev/null
           ln -sf /usr/bin/python3.9 /usr/local/bin/python3
-          ln -sf /opt/rh/gcc-toolset-12/root/usr/bin/gcc /usr/local/bin/cc
-          ln -sf /opt/rh/gcc-toolset-12/root/usr/bin/gcc /usr/local/bin/cc
+          for t in gcc g++ cc c++ ar ranlib nm ld; do
+            ln -sf "/opt/rh/gcc-toolset-12/root/usr/bin/$t" "/usr/local/bin/$t"
+          done
           node_tar=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
             | grep -oE 'node-v22\.[0-9]+\.[0-9]+-linux-arm64\.tar\.xz' | head -1)
           curl -fsSLO "https://nodejs.org/dist/latest-v22.x/$node_tar"
           tar -xJf "$node_tar" -C /usr/local --strip-components=1
-          node --version && python3 --version && gcc --version | head -1
+          node --version && python3 --version && gcc --version | head -1 && g++ --version | head -1
 
       - uses: actions/checkout@v4
 
