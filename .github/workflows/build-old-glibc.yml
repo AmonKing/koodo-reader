@@ -29,7 +29,10 @@ jobs:
             p.build.linux.target=[{target:"AppImage",arch:["arm64"]}];
             fs.writeFileSync("package.json",JSON.stringify(p,null,2))'
 
-      - name: Build
+      - name: Build web assets (react-scripts build -> build/)
+        run: yarn build
+
+      - name: Package
         run: npx electron-builder --linux --arm64 --publish never
         env:
           USE_HARD_LINKS: "false"
@@ -40,6 +43,10 @@ jobs:
           echo "artifact: $appimg"
           chmod +x "$appimg"
           "$appimg" --appimage-extract > /dev/null
+          echo "--- assert web assets are inside asar:"
+          npx --yes @electron/asar list squashfs-root/resources/app.asar | grep -q 'build/index.html' \
+            || { echo "FAIL: build/index.html missing from app.asar"; exit 1; }
+          echo "asar contains build/index.html"
           echo "--- top version requirements across all bundled ELF files:"
           find squashfs-root \( -name '*.so*' -o -name '*.node' \) -print0 \
             | xargs -0 grep -haoE 'GLIBC_2\.[0-9]+|GLIBCXX_[0-9.]+' 2>/dev/null \
