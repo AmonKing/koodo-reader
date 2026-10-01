@@ -9,13 +9,17 @@ jobs:
   build:
     runs-on: ubuntu-24.04-arm
     container: registry.access.redhat.com/ubi8/ubi:latest
+    env:
+      # gcc-toolset-12 (GCC 12, still targeting system glibc 2.28) — better-sqlite3 needs C++20,
+      # base GCC 8 only knows -std=c++2a
+      BASH_ENV: /opt/rh/gcc-toolset-12/enable
     steps:
       - name: Install toolchain (UBI8 glibc 2.28; node22 official binaries are RHEL8-built)
         run: |
           set -eux
           dnf -y install dnf-plugins-core >/dev/null
           dnf -y module enable python39 >/dev/null
-          dnf -y install python39 tar xz gzip bzip2 make gcc gcc-c++ >/dev/null
+          dnf -y install python39 tar xz gzip bzip2 make gcc-toolset-12 >/dev/null
           ln -sf /usr/bin/python3.9 /usr/local/bin/python3
           node_tar=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
             | grep -oE 'node-v22\.[0-9]+\.[0-9]+-linux-arm64\.tar\.xz' | head -1)
