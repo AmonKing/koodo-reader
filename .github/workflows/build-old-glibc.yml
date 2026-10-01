@@ -19,7 +19,7 @@ jobs:
           set -eux
           dnf -y install dnf-plugins-core >/dev/null
           dnf -y module enable python39 >/dev/null
-          dnf -y install python39 tar xz gzip bzip2 make gcc-toolset-12 binutils findutils >/dev/null
+          dnf -y install python39 tar xz gzip bzip2 make gcc-toolset-12 binutils findutils zlib >/dev/null
           ln -sf /usr/bin/python3.9 /usr/local/bin/python3
           for t in gcc g++ cc c++ ar ranlib nm ld; do
             ln -sf "/opt/rh/gcc-toolset-12/root/usr/bin/$t" "/usr/local/bin/$t"
